@@ -1,0 +1,13 @@
+[formatter.nixfmt]
+command = "nixfmt"
+includes = ["*.nix"]
+
+[formatter.gofmt]
+command = "gofmt"
+includes = ["*.go"]
+
+[formatter.prettier]
+command = "prettier"
+options = ["--write", "--prose-wrap", "always", "--print-width", "80"]
+includes = ["*.md"]
+
