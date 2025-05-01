@@ -1,19 +1,14 @@
 {
-  description = "🌬️ Brisa - Extracts Brazilian NFC-e data in a smooth manner";
+  description = "🌬️ Brisa -  Brazilian Invoice Scraping Agent";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
 
-  outputs =
-    { self, nixpkgs, ... }:
-    let
-      systems = [
-        "aarch64-linux"
-        "x86_64-linux"
-      ];
+  outputs = { self, nixpkgs, ... }:
+    let 
+      systems = [ "aarch64-linux" "x86_64-linux" ];
       forEachSystem = nixpkgs.lib.genAttrs systems;
     in
     {
-      packages = forEachSystem (
-        system:
+      packages = forEachSystem (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
@@ -22,7 +17,7 @@
             pname = "brisa";
             version = "alpha";
             src = ./.;
-            vendorHash = "sha256-PmOUK4yXy8J18YNsChxZ5xzUEsgZL6LDMumA3tGQzNE=";
+            vendorHash = "sha256-Ifh8WbCPFFgyF615UwIbqriTNZJJk2HXD9BlkcMJgZM=";
             meta = with pkgs.lib; {
               description = "Library for extracting data from Brazilian electronic tax receipts (NFC-e)";
               homepage = "https://github.com/glwbr/brisa";
@@ -33,23 +28,17 @@
         }
       );
 
-      devShells = forEachSystem (
-        system:
+      devShells = forEachSystem (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
           default = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              go
-              treefmt
-              nixfmt-rfc-style
-              nodePackages.prettier
-            ];
+            buildInputs = with pkgs; [ go treefmt nixfmt-rfc-style nodePackages.prettier ];
             shellHook = ''
               export BRISA_DEV=1
               echo "🌬️ Brisa development environment loaded"
-              echo "Type 'go run cmd/brisa/main.go' to start the application"
+              echo "Type 'go run cmd/brisa/main.go or nix run' to start the application"
             '';
           };
         }
