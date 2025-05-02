@@ -1,5 +1,5 @@
-// Package client provides a flexible HTTP client with common functionality
-// for making API requests with configurable behavior.
+// Package client provides a flexible HTTP client for making API requests
+// with configurable transport chains, logging, and request handling.
 package client
 
 import (
@@ -18,13 +18,12 @@ const (
 
 var defaultClient *Client
 
-// Doer is an interface for executing HTTP requests.
-// It allows for easy mocking in tests and custom HTTP client implementations.
+// Doer performs HTTP requests, allowing for custom implementations and testing mocks.
 type Doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-// Client is a generic HTTP client with common functionality for API requests.
+// Client is an HTTP client with support for base URLs, middleware chains, and logging.
 type Client struct {
 	doer    Doer
 	baseURL *url.URL
@@ -32,15 +31,12 @@ type Client struct {
 	config  *ClientConfig
 }
 
-// New creates an API HTTPClient with optional configuration and sensible defaults.
-// Use the With* option functions to customize the client's behavior.
-// when will this error? we must check to return it correctly
-// it might fail when the user creates a CustomClient and doesnt
-// set tls coinfig correctly, but how to get these errors ?
+// New creates a Client with the provided options.
+// It uses sensible defaults that can be overridden with ClientOption functions.
 func New(opts ...ClientOption) (*Client, error) {
 	var doer Doer
-
 	cfg := buildConfig(opts...)
+
 	if cfg.CustomDoer != nil {
 		doer = cfg.CustomDoer
 	} else {
@@ -55,13 +51,11 @@ func New(opts ...ClientOption) (*Client, error) {
 	}, nil
 }
 
+// createDefaultDoer builds an http.Client with the configured options.
 func createDefaultDoer(cfg *ClientConfig) Doer {
 	client := &http.Client{
-		Timeout: cfg.Timeout,
-		Transport: NewTransport(
-			WithHeadersTransport(cfg.Headers),
-			WithLogging(cfg.Logger, cfg.Debug),
-		),
+		Timeout:   cfg.Timeout,
+		Transport: buildTransport(cfg),
 	}
 
 	if cfg.Jar != nil {
@@ -73,9 +67,8 @@ func createDefaultDoer(cfg *ClientConfig) Doer {
 
 func init() {
 	var err error
-
 	defaultClient, err = New()
 	if err != nil {
-		log.Printf("failed to initialize HTTP client: %v", err)
+		log.Fatalf("failed to initialize default HTTP client: %v", err)
 	}
 }
