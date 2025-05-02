@@ -9,21 +9,20 @@ import (
 	"github.com/glwbr/brisa/pkg/errors"
 )
 
-// RequestConfig provides configuration for individual requests.
+// RequestConfig contains options for customizing HTTP requests.
 type RequestConfig struct {
 	Params  url.Values
 	Body    io.Reader
 	Headers map[string]string
 }
 
-// Get performs an HTTP GET request to the specified path or URL.
-// If a relative path is provided, it will be resolved against the base URL if set.
+// Get sends an HTTP GET request to the specified path or URL.
+// For relative paths, the client's base URL is used if set.
 func (c *Client) Get(ctx context.Context, path string, opts *RequestConfig) (*http.Response, error) {
 	return c.do(ctx, http.MethodGet, path, opts)
 }
 
-// Get is a convenience function for performing a simple HTTP GET request using the default client.
-// It uses a background context and does not support additional configuration.
+// Get sends a simple HTTP GET request using the default client.
 func Get(url string) (*http.Response, error) {
 	if defaultClient == nil {
 		return nil, errors.New("default client not initialized")
@@ -74,31 +73,27 @@ func (c *Client) do(ctx context.Context, method, urlOrPath string, opts *Request
 	return resp, err
 }
 
-// resolveURL handles path or full URL resolution against the base URL.
+// resolveURL constructs the full request URL from a path or URL.
 func (c *Client) resolveURL(pathOrURL string, queryParams url.Values) (*url.URL, error) {
-	// Parse the input (could be a path or full URL)
 	u, err := url.Parse(pathOrURL)
 	if err != nil {
 		return nil, errors.Wrapf(err, "invalid URL or path: %s", pathOrURL)
 	}
 
-	// If it's already a complete URL (has scheme and host), use as-is
 	if u.IsAbs() {
 		return c.addQueryParams(u, queryParams), nil
 	}
 
-	// For relative paths, ensure we have a base URL
 	if c.baseURL == nil {
 		return nil, errors.New("cannot resolve relative path without a base URL")
 	}
 
-	// Resolve against base URL
-	resolved := c.baseURL.ResolveReference(u)
+	resolved := c.baseURL.JoinPath(u.Path)
 
 	return c.addQueryParams(resolved, queryParams), nil
 }
 
-// Helper function to add query parameters
+// addQueryParams appends query parameters to a URL.
 func (c *Client) addQueryParams(u *url.URL, params url.Values) *url.URL {
 	if params == nil {
 		return u

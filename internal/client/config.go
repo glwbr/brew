@@ -1,9 +1,11 @@
 package client
 
 import (
+	"fmt"
 	"maps"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/glwbr/brisa/pkg/logger"
@@ -40,19 +42,29 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
-// WithBaseURL sets the base URL for resolving relative request paths.
-// The URL must be parseable, otherwise an error is logged and the base URL remains unset.
-// Example: "https://api.example.com/v1"
+// WithBaseURL sets and normalizes the base URL for the client.
+//
+// This function ensures the provided baseURL is a valid absolute URL (with scheme and host).
+// It removes any trailing slashes from the path to maintain consistency during URL resolution.
+// If the provided baseURL is invalid or not absolute, an error is logged, and the URL is not set.
+//
+// Example:
+//
+//	"http://example.com/api/v1/" -> "http://example.com/api/v1"
+//
+// If the baseURL is empty or invalid, the client will use the default behavior (no base URL)
 func WithBaseURL(baseURL string) ClientOption {
 	return func(cfg *ClientConfig) {
 		if baseURL == "" {
 			return
 		}
-		u, err := url.Parse(baseURL)
+
+		u, err := normalizeBaseURL(baseURL)
 		if err != nil {
-			cfg.Logger.Error("invalid URL", "url", baseURL, "error", err)
+			cfg.Logger.Error("invalid baseURL", "url", baseURL, "error", err)
 			return
 		}
+
 		cfg.BaseURL = u
 	}
 }
@@ -121,6 +133,23 @@ func WithCustomDoer(d Doer) ClientOption {
 			cfg.CustomDoer = d
 		}
 	}
+}
+
+// normalizeBaseURL parses and validates the given baseURL string.
+// It ensures the URL is absolute (has scheme and host) and removes any trailing slash from the path.
+// Returns a normalized *url.URL or an error if the input is invalid.
+func normalizeBaseURL(baseURL string) (*url.URL, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %w", err)
+	}
+
+	if !u.IsAbs() {
+		return nil, fmt.Errorf("base URL must be absolute (have scheme and host)")
+	}
+
+	u.Path = strings.TrimRight(u.Path, "/")
+	return u, nil
 }
 
 // buildConfig constructs a Config with defaults and applies all provided options.
